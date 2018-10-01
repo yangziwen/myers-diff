@@ -1,10 +1,12 @@
-var MyersDiff = Object.assign((function(srcArr, dstArr) {
+var MyersDiff = Object.assign((function(srcArr, dstArr, findAllSteps) {
     this.srcArr = srcArr;
     this.dstArr = dstArr;
     this.mapping = {};  // key is [d][k], value is the matrix position
     this.prevStepMapping = {}; // key is [d][k], value is the previous d,k
-    this.findWholePath = false;
-    this.finalStep = null;
+    this.findAllSteps = !!findAllSteps;
+    this.finalSteps = [];
+    this.foundBestSteps = false;
+    this.bestFinalStep = null;
 }).prototype, {
     NOT_EXIST_POSITION: {x: -1, y: -1},
     getPosition(d, k) {
@@ -31,11 +33,17 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
         }
         return false;
     },
-    getWholeSteps() {
-        return this.getSteps(this.finalStep);
+    getBestFinalStep() {
+        return this.bestFinalStep;
     },
-    getWholePositions() {
-        return this.getWholeSteps(this.finalStep).map(step => {
+    getBestSteps() {
+        return this.getSteps(this.bestFinalStep);
+    },
+    getBestPositions() {
+        return this.getPositions(this.bestFinalStep);
+    },
+    getPositions(lastStep) {
+        return this.getSteps(lastStep).map(step => {
             return this.getPosition(step.d, step.k);
         })
     },
@@ -53,36 +61,46 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
         }
         return steps;
     },
-    showDiff() {
+    getSimpleDiff(lastStep) {
+        lastStep || (lastStep = this.getBestFinalStep());
+        if (!lastStep) {
+            return [];
+        }
+        var lines = [];
         let prevPosition = {x: 0, y: 0};
-        let positions = this.getWholePositions();
+        let positions = this.getPositions(lastStep);
         for (let position of positions) {
             let {x, y} = prevPosition;
             let stepX = position.x - prevPosition.x;
             let stepY = position.y - prevPosition.y;
             let noChangeStep = Math.min(stepX, stepY);
             if (stepX > stepY) {
-                console.log('- ' + this.srcArr[prevPosition.x]);
+                lines.push('- ' + this.srcArr[prevPosition.x]);
                 x++;
             } else if (stepX < stepY) {
-                console.log('+ ' + this.dstArr[prevPosition.y]);
+                lines.push('+ ' + this.dstArr[prevPosition.y]);
                 y++;
             }
             if (noChangeStep > 0) {
                 this.srcArr.slice(x, x + noChangeStep).forEach(value => {
-                    console.log('  ' + value);
+                    lines.push('  ' + value);
                 });
             }
             prevPosition = position;
         }
+        return lines;
+    },
+    showSimpleDiff(lastStep) {
+        this.getSimpleDiff(lastStep).forEach(line => console.log(line));
     },
     calDiff() {
         for (let d = 0; d < this.srcArr.length + this.dstArr.length; d++) {
-            if (this.findWholePath) {
+            if (this.foundBestSteps && !this.findAllSteps) {
                 break;
             }
             this.calAndAddPositions(d);
         }
+        return this;
     },
     calAndAddPositions(d) {
         for (let k = d; k >= -d; k -= 2) {
@@ -90,7 +108,7 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
             if (this.addPosition(d, k, position)) {
                 this.ensureSubmapping(this.prevStepMapping, d)[k] = position.prevStep;
             }
-            if (this.findWholePath) {
+            if (this.foundBestSteps && !this.findAllSteps) {
                 return;
             }
         }
@@ -126,8 +144,11 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
                 y++;
             }
             if (x == this.srcArr.length && y == this.dstArr.length) {
-                this.findWholePath = true;
-                this.finalStep = {d, k};
+                this.finalSteps.push({d, k});
+                if (!this.foundBestSteps) {
+                    this.foundBestSteps = true;
+                    this.bestFinalStep = {d, k};
+                }
             }
             return {x, y, prevStep: {d: d0, k: k0}}
         });

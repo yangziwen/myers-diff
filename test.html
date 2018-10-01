@@ -1,15 +1,43 @@
 <html>
 <head>
+<style>
+div {
+    font-size: 14px;
+}
+</style>
 <script src="myers.js"></script>
 <script>
 window.onload = () => {
-    let src = ["a", "b", "c", "a", "b", "b", "a"];
-    let dst = ["c", "b", "a", "b", "a", "c"];
-    let diff = new MyersDiff(src, dst);
-    diff.calDiff();
-    window.diff = diff;
+    let srcTextArea = document.getElementById('src_txt');
+    let dstTextArea = document.getElementById('dst_txt');
+    let diffResult = document.getElementById('diff_result');
+    let findAllStepsSel = document.getElementById('find_all_steps_sel')
+    document.getElementById('compare_btn').onclick = ev => {
+        let srcText = srcTextArea.value;
+        let dstText = dstTextArea.value;
+        let findAllSteps = findAllStepsSel.value === 'true';
+        let diff = new MyersDiff(srcText.split(/\r|\n/), dstText.split(/\r|\n/), findAllSteps);
+        diffResult.value = diff.calDiff().getSimpleDiff().join('\n');
+        window.diff = diff;
+    };
 }
 </script>
 </head>
-
+<body>
+    <div>
+        <textarea id="src_txt" style="width: 400px; height: 200px;"></textarea>
+        <textarea id="dst_txt" style="width: 400px; height: 200px;"></textarea>
+    </div>
+    <div>
+        <button id="compare_btn">比较</button>
+        计算所有路径
+        <select id="find_all_steps_sel">
+            <option value="true">是</option>
+            <option value="false" selected>否</option>
+        </select>
+    </div>
+    <div>
+        <textarea id="diff_result" style="width: 600px; height: 400px;"></textarea>
+    </div>
+</body>
 </html>
