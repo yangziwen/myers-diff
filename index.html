@@ -4,8 +4,39 @@
 div {
     font-size: 14px;
 }
+h1 {
+    text-align: center;
+}
+.container {
+    margin: 0px auto;
+    width: 1180px;
+}
+textarea.diff_area {
+    width: 580px;
+    height: 300px;
+}
+.operation-container {
+    margin: 10px auto;
+    width: 350px;
+}
+#search_depth_input {
+    width: 60px;
+}
+#step_chart {
+    width: 580px;
+    height: 400px;
+    display: inline-block;
+    border: 1px solid #999;
+}
+.diff-result {
+    display: inline-block;
+}
+#diff_result {
+    width: 580px;
+    height: 400px;
+}
 </style>
-<script src="myers.js"></script>
+<script src="js/myers.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.1.0.rc2/echarts-en.common.js"></script>
 <script>
 window.onload = () => {
@@ -15,6 +46,7 @@ window.onload = () => {
     let findAllStepsSel = document.getElementById('find_all_steps_sel');
     let searchDepthInput = document.getElementById('search_depth_input');
     let chart = echarts.init(document.getElementById('step_chart'));
+
     document.getElementById('compare_btn').onclick = ev => {
         let srcText = srcTextArea.value;
         let dstText = dstTextArea.value;
@@ -27,6 +59,17 @@ window.onload = () => {
         });
         diffResult.value = diff.calDiff().getSimpleDiff().join('\n');
         window.diff = diff;
+        refreshChart(diff);
+    };
+
+    chart.on('click', params => {
+        if (params.componentType == 'series') {
+            let [d, k] = params.data;
+            diffResult.value = diff.getSimpleDiff({d, k}).join('\n');
+        }
+    });
+
+    function refreshChart(diff) {
         let stepSet = new Set();
         let series = [];
         for (let finalStep of diff.getFinalSteps()) {
@@ -55,19 +98,49 @@ window.onload = () => {
         }
         chart.setOption({
             title: {
-                text: 'steps',
+                text: '',
                 x: 'center'
             },
-            tooltip: {},
+            tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                borderColor: '#ccc',
+                borderWidth: 1,
+                textStyle: {
+                    color: '#666'
+                },
+                formatter(params) {
+                    let [d, k] = params.data;
+                    let pos = diff.getPosition(d, k);
+                    return [
+                        `pos: (x=${pos.x}, y=${pos.y})`,
+                        `step: (d=${d}, k=${k})`
+                    ].join('<br/>')
+                }
+            },
+            animation: false,
+            grid: {
+                left: 35,
+                right: 20,
+                top: 20,
+                bottom: 35
+            },
+            dataZoom: {
+                type: 'inside',
+                zoomOnMouseWheel: 'ctrl'
+            },
             xAxis: {
+                name: 'd',
+                nameLocation: 'middle',
                 type: 'value'
             },
             yAxis: {
+                name: 'k = x - y',
+                nameLocation: 'middle',
                 type: 'value'
             },
             series: series
         }, true);
-    };
+    }
 
     function generateDataByLastStep(lastStep, stepSet) {
         let steps = diff.getSteps(lastStep).map(step => {
@@ -88,11 +161,12 @@ window.onload = () => {
 </script>
 </head>
 <body>
-    <div>
-        <textarea id="src_txt" style="width: 400px; height: 200px;"></textarea>
-        <textarea id="dst_txt" style="width: 400px; height: 200px;"></textarea>
+    <h1>基于Myers算法的文本比对工具</h1>
+    <div class="container">
+        <textarea id="src_txt" class="diff_area" placeholder="请输入源文件内容"></textarea>
+        <textarea id="dst_txt" class="diff_area" placeholder="请输入目标文件内容"></textarea>
     </div>
-    <div>
+    <div class="operation-container">
         计算所有路径
         <select id="find_all_steps_sel">
             <option value="true">是</option>
@@ -102,9 +176,11 @@ window.onload = () => {
         <input id="search_depth_input" value="1000"/>
         / <button id="compare_btn">比较</button>
     </div>
-    <div id="step_chart" style="width: 800px; height: 600px;"></div>
-    <div>
-        <textarea id="diff_result" style="width: 800px; height: 600px;"></textarea>
+    <div class="container">
+        <div id="step_chart"></div>
+        <div class="diff-result">
+            <textarea id="diff_result"></textarea>
+        </div>
     </div>
 </body>
 </html>
