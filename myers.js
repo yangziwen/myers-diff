@@ -24,8 +24,8 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
         if (position == this.NOT_EXIST_POSITION) {
             return false;
         }
-        const prevPosition = this.getPosition(d, k);
-        if (position.x > prevPosition.x) {
+        const existedPosition = this.getPosition(d, k);
+        if (position.x > existedPosition.x) {
             this.ensureSubmapping(this.mapping, d)[k] = position;
             return true;
         }
@@ -53,14 +53,35 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
         }
         return steps;
     },
-    calDiff() {
-        with (this) {
-            for (let d = 0; d < srcArr.length + dstArr.length; d++) {
-                if (findWholePath) {
-                    break;
-                }
-                calAndAddPositions(d);
+    showDiff() {
+        let prevPosition = {x: 0, y: 0};
+        let positions = this.getWholePositions();
+        for (let position of positions) {
+            let {x, y} = prevPosition;
+            let stepX = position.x - prevPosition.x;
+            let stepY = position.y - prevPosition.y;
+            let noChangeStep = Math.min(stepX, stepY);
+            if (stepX > stepY) {
+                console.log('- ' + this.srcArr[prevPosition.x]);
+                x++;
+            } else if (stepX < stepY) {
+                console.log('+ ' + this.dstArr[prevPosition.y]);
+                y++;
             }
+            if (noChangeStep > 0) {
+                this.srcArr.slice(x, x + noChangeStep).forEach(value => {
+                    console.log('  ' + value);
+                });
+            }
+            prevPosition = position;
+        }
+    },
+    calDiff() {
+        for (let d = 0; d < this.srcArr.length + this.dstArr.length; d++) {
+            if (this.findWholePath) {
+                break;
+            }
+            this.calAndAddPositions(d);
         }
     },
     calAndAddPositions(d) {
@@ -76,7 +97,13 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
     },
     calPosition(d, k) {
         if (d <=0) {
-            return {x: 0, y: 0};
+            let x = 0, y = 0;
+            while (x < this.srcArr.length && y < this.dstArr.length
+                    && this.srcArr[x] == this.dstArr[y]) {
+                x++;
+                y++;
+            }
+            return {x, y};
         }
         let d0 = d - 1;
         let positions = [k - 1, k + 1].map(k0 => {
