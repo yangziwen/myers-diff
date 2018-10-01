@@ -2,7 +2,7 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
     this.srcArr = srcArr;
     this.dstArr = dstArr;
     this.mapping = {};  // key is [d][k], value is the matrix position
-    this.prevMapping = {}; // key is [d][k], value is the previous d,k
+    this.prevStepMapping = {}; // key is [d][k], value is the previous d,k
     this.findWholePath = false;
     this.finalStep = null;
 }).prototype, {
@@ -12,16 +12,21 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
             return mapping[d] && mapping[d][k] || NOT_EXIST_POSITION;
         }
     },
-    getPrevPosition(d, k) {
+    getPrevStep(d, k) {
         with (this) {
-            return prevMapping[d] && prevMapping[d][k] || null;
+            return prevStepMapping[d] && prevStepMapping[d][k] || null;
         }
     },
+    ensureSubmapping(mapping, key) {
+        return mapping[key] || (mapping[key] = {});
+    },
     addPosition(d, k, position) {
-        const submapping = this.mapping[d] || (this.mapping[d] = {});
+        if (position == this.NOT_EXIST_POSITION) {
+            return false;
+        }
         const prevPosition = this.getPosition(d, k);
         if (position.x > prevPosition.x) {
-            submapping[k] = position;
+            this.ensureSubmapping(this.mapping, d)[k] = position;
             return true;
         }
         return false;
@@ -38,13 +43,13 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
         if (!lastStep) {
             return [];
         }
-        var steps = [lastStep];
+        let steps = [lastStep];
         let {d, k} = lastStep;
-        var prev = null;
-        while (prev = this.getPrevPosition(d, k)) {
-            steps.unshift(prev);
-            d = prev.d;
-            k = prev.k
+        let prevStep = this.getPrevStep(d, k);
+        while (prevStep) {
+            steps.unshift(prevStep);
+            d = prevStep.d, k = prevStep.k;
+            prevStep = this.getPrevStep(d, k);
         }
         return steps;
     },
@@ -62,8 +67,7 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
         for (let k = d; k >= -d; k -= 2) {
             let position = this.calPosition(d, k);
             if (this.addPosition(d, k, position)) {
-                let submapping = this.prevMapping[d] || (this.prevMapping[d] = {});
-                submapping[k] = position.prev;
+                this.ensureSubmapping(this.prevStepMapping, d)[k] = position.prevStep;
             }
             if (this.findWholePath) {
                 return;
@@ -83,13 +87,9 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
             if (prevPosition == this.NOT_EXIST_POSITION) {
                 return this.NOT_EXIST_POSITION;
             }
-            let x0 = prevPosition.x, y0 = prevPosition.y;
-            let x = x0, y = y0;
-            if (k > k0) {
-                x = x0 + 1;
-            } else if (k < k0) {
-                y = y0 + 1;
-            }
+            let {x, y} = prevPosition;
+            k > k0 && x++;
+            k < k0 && y++;
             if (x > this.srcArr.length || y > this.dstArr.length) {
                 return this.NOT_EXIST_POSITION;
             }
@@ -102,7 +102,7 @@ var MyersDiff = Object.assign((function(srcArr, dstArr) {
                 this.findWholePath = true;
                 this.finalStep = {d, k};
             }
-            return {x, y, prev: {d: d0, k: k0}}
+            return {x, y, prevStep: {d: d0, k: k0}}
         });
         return positions[0].x > positions[1].x ? positions[0] : positions[1];
     }

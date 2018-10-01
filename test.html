@@ -6,8 +6,7 @@ window.onload = () => {
     let src = ["a", "b", "c", "a", "b", "b", "a"];
     let dst = ["c", "b", "a", "b", "a", "c"];
     let diff = new MyersDiff(src, dst);
-    diff.calAndAddPositions(0);
-    diff.calAndAddPositions(1);
+    diff.calDiff();
     window.diff = diff;
 }
 </script>
