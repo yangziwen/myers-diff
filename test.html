@@ -6,20 +6,84 @@ div {
 }
 </style>
 <script src="myers.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.1.0.rc2/echarts-en.common.js"></script>
 <script>
 window.onload = () => {
     let srcTextArea = document.getElementById('src_txt');
     let dstTextArea = document.getElementById('dst_txt');
     let diffResult = document.getElementById('diff_result');
-    let findAllStepsSel = document.getElementById('find_all_steps_sel')
+    let findAllStepsSel = document.getElementById('find_all_steps_sel');
+    let searchDepthInput = document.getElementById('search_depth_input');
+    let chart = echarts.init(document.getElementById('step_chart'));
     document.getElementById('compare_btn').onclick = ev => {
         let srcText = srcTextArea.value;
         let dstText = dstTextArea.value;
         let findAllSteps = findAllStepsSel.value === 'true';
-        let diff = new MyersDiff(srcText.split(/\r|\n/), dstText.split(/\r|\n/), findAllSteps);
+        let diff = new MyersDiff({
+            srcArr: srcText.split(/\r|\n/),
+            dstArr: dstText.split(/\r|\n/), 
+            findAllSteps,
+            maxSearchDepth: searchDepthInput.value
+        });
         diffResult.value = diff.calDiff().getSimpleDiff().join('\n');
         window.diff = diff;
+        let stepSet = new Set();
+        let series = [];
+        for (let finalStep of diff.getFinalSteps()) {
+            let data = generateDataByLastStep(finalStep, stepSet);
+            if (data.length <= 1) {
+                continue;
+            }
+            series.push({type: 'line', data});
+        }
+        for (let d of Object.keys(diff.prevStepMapping).reverse()) {
+            for (let k of Object.keys(diff.prevStepMapping[d])) {
+                let data = generateDataByLastStep({d, k}, stepSet);
+                if (data.length <= 1) {
+                    continue;
+                }
+                series.push({
+                    type: 'line',
+                    lineStyle: {
+                        normal: {
+                            type: 'dashed'
+                        }
+                    },
+                    data
+                });
+            }
+        }
+        chart.setOption({
+            title: {
+                text: 'steps',
+                x: 'center'
+            },
+            tooltip: {},
+            xAxis: {
+                type: 'value'
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: series
+        }, true);
     };
+
+    function generateDataByLastStep(lastStep, stepSet) {
+        let steps = diff.getSteps(lastStep).map(step => {
+            step.key = step.d + ',' + step.k;
+            return step;
+        });
+        let data = [];
+        for (let step of steps.reverse()) {
+            data.unshift([step.d, step.k]);
+            if (stepSet.has(step.key)) {
+                break;
+            }
+            stepSet.add(step.key);
+        }
+        return data;
+    }
 }
 </script>
 </head>
@@ -29,15 +93,18 @@ window.onload = () => {
         <textarea id="dst_txt" style="width: 400px; height: 200px;"></textarea>
     </div>
     <div>
-        <button id="compare_btn">比较</button>
         计算所有路径
         <select id="find_all_steps_sel">
             <option value="true">是</option>
             <option value="false" selected>否</option>
         </select>
+        / 搜索深度
+        <input id="search_depth_input" value="1000"/>
+        / <button id="compare_btn">比较</button>
     </div>
+    <div id="step_chart" style="width: 800px; height: 600px;"></div>
     <div>
-        <textarea id="diff_result" style="width: 600px; height: 400px;"></textarea>
+        <textarea id="diff_result" style="width: 800px; height: 600px;"></textarea>
     </div>
 </body>
 </html>

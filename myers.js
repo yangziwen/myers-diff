@@ -1,9 +1,11 @@
-var MyersDiff = Object.assign((function(srcArr, dstArr, findAllSteps) {
-    this.srcArr = srcArr;
-    this.dstArr = dstArr;
+var MyersDiff = Object.assign((function(options) {
+    this.srcArr = options.srcArr;
+    this.dstArr = options.dstArr;
     this.mapping = {};  // key is [d][k], value is the matrix position
     this.prevStepMapping = {}; // key is [d][k], value is the previous d,k
-    this.findAllSteps = !!findAllSteps;
+    let maxSearchDepth = parseInt(options.maxSearchDepth);
+    this.maxSearchDepth = !isNaN(maxSearchDepth) ? maxSearchDepth : 1000;
+    this.findAllSteps = !!options.findAllSteps;
     this.finalSteps = [];
     this.foundBestSteps = false;
     this.bestFinalStep = null;
@@ -35,6 +37,9 @@ var MyersDiff = Object.assign((function(srcArr, dstArr, findAllSteps) {
     },
     getBestFinalStep() {
         return this.bestFinalStep;
+    },
+    getFinalSteps() {
+        return this.finalSteps;
     },
     getBestSteps() {
         return this.getSteps(this.bestFinalStep);
@@ -94,7 +99,8 @@ var MyersDiff = Object.assign((function(srcArr, dstArr, findAllSteps) {
         this.getSimpleDiff(lastStep).forEach(line => console.log(line));
     },
     calDiff() {
-        for (let d = 0; d < this.srcArr.length + this.dstArr.length; d++) {
+        let depth = Math.min(this.maxSearchDepth, this.srcArr.length + this.dstArr.length);
+        for (let d = 0; d <= depth; d++) {
             if (this.foundBestSteps && !this.findAllSteps) {
                 break;
             }
