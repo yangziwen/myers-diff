@@ -40,7 +40,7 @@ var DiffEditor = Object.assign((function(monaco, el) {
                 range: new this.monaco.Range(lineNumber + 1, 1, lineNumber + edit.lines.length, 1),
                 options: {
                     isWholeLine: true,
-                    className: `decoration-${edit.type}`
+                    className: `decoration-${edit.type}-background`
                 }
             })
             lineNumber += edit.lines.length;
@@ -69,5 +69,52 @@ var DiffEditor = Object.assign((function(monaco, el) {
             }
         }
         return lineNumbers;
+    }
+}).constructor;
+
+var DiffBlockEditor = Object.assign((function(monaco, el) {
+    this.monaco = monaco;
+    this.editor = monaco.editor.create(el, {
+        readOnly: true,
+        minimap: {
+            enabled: false
+        }
+    });
+}).prototype, {
+    refresh(lines) {
+        this.editor.setValue(lines.join('\n'));
+        this.editor.deltaDecorations([], this._generateHighlightDecorations(lines));
+    },
+    _generateHighlightDecorations(lines) {
+        let lineNumber = 0;
+        let prevLineNumber = 0;
+        let decorations = [];
+        let prevPrefix = ' ';
+        for (let line of lines) {
+            lineNumber++;
+            let prefix = line.charAt(0);
+            if (prefix !== prevPrefix) {
+                if (prevLineNumber > 0) {
+                    let lineType = ({
+                        '@': 'header',
+                        '+': 'add',
+                        '-': 'delete'
+                    })[prevPrefix];
+                    if (lineType) {
+                        decorations.push({
+                            range: new this.monaco.Range(prevLineNumber, 1, lineNumber, 0),
+                            options: {
+                                isWholeline: true,
+                                className: `decoration-${lineType}`,
+                                inlineClassName: `decoration-${lineType}`
+                            }
+                        })
+                    }
+                }
+                prevLineNumber = lineNumber;
+                prevPrefix = prefix;
+            }
+        }
+        return decorations;
     }
 }).constructor;

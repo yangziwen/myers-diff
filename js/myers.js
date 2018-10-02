@@ -118,8 +118,11 @@ var MyersDiff = Object.assign((function(options) {
         if (!edits.find(edit => edit.type != 'common')) {
             return [];
         }
-        !unified && unified !== 0 && (unified = 3);
-        let currentBlock = {edits: [edits[0]]}
+        isNaN(unified = parseInt(unified)) && (unified = 3);
+        let currentBlock = {edits: []};
+        if (unified > 0 || ['delete', 'add'].includes(edits[0].type)) {
+            currentBlock.edits.push(edits[0]);
+        }
         let blocks = [currentBlock];
         let lastEdit = edits.slice(-1)[0];
         for (let i = 1; i < edits.length; i++) {
@@ -129,9 +132,14 @@ var MyersDiff = Object.assign((function(options) {
                 continue;
             }
             if (edit.type == 'common') {
-                currentBlock.edits.push(edit);
+                if (unified > 0) {
+                    currentBlock.edits.push(edit);
+                }
                 if (edit.lines.length > 2 * unified && edit !== lastEdit) {
-                    currentBlock = {edits: [edit]};
+                    currentBlock = {edits: []};
+                    if (unified > 0) {
+                        currentBlock.edits.push(edit);
+                    }
                     blocks.push(currentBlock);
                 }
             }

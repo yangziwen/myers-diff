@@ -19,16 +19,28 @@ h1 {
 }
 .operation-container {
     margin: 10px auto;
-    width: 350px;
+    width: 400px;
+}
+.decoration-header {
+    color: #aa00bb !important;
 }
 .decoration-delete {
-    background-color: lightcoral
+    color: #dd4444 !important;
 }
 .decoration-add {
+    color: #229922 !important;
+}
+.decoration-delete-background {
+    background-color: lightcoral
+}
+.decoration-add-background {
     background-color:lightgreen
 }
 #search_depth_input {
-    width: 60px;
+    width: 40px;
+}
+#unified_input {
+    width: 40px;
 }
 #step_chart, #position_chart {
     width: 580px;
@@ -54,12 +66,14 @@ require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-e
 window.onload = () => {
     let findAllStepsSel = document.getElementById('find_all_steps_sel');
     let searchDepthInput = document.getElementById('search_depth_input');
+    let unifiedInput = document.getElementById('unified_input');
     let editors = {};
 
     require(['vs/editor/editor.main'], function() {
         editors['srcEditor'] = new TextEditor(monaco, document.getElementById('src_txt'));
         editors['dstEditor'] = new TextEditor(monaco, document.getElementById('dst_txt'));
         editors['diffEditor'] = new DiffEditor(monaco, document.getElementById('diff_result'));
+        editors['diffBlockEditor'] = new DiffBlockEditor(monaco, document.getElementById('formatted_diff_result'));
     });
 
     let positionChart = new PositionChart(echarts, document.getElementById('position_chart'));
@@ -68,6 +82,7 @@ window.onload = () => {
         if (params.componentType == 'series') {
             let [d, k] = params.data;
             editors['diffEditor'].refresh(diff.getEdits({d, k}));
+            editors['diffBlockEditor'].refresh(diff.getStandardDiff({d, k}));
             positionChart.refresh(diff.getPositions({d, k}));
         }
     });
@@ -85,6 +100,7 @@ window.onload = () => {
         diff.calDiff();
         stepChart.refresh(diff);
         editors['diffEditor'].refresh(diff.getEdits());
+        editors['diffBlockEditor'].refresh(diff.getStandardDiff(null, unifiedInput.value));
         positionChart.refresh(diff.getBestPositions());
     };
 }
@@ -103,7 +119,9 @@ window.onload = () => {
             <option value="false" selected>否</option>
         </select>
         / 搜索深度
-        <input id="search_depth_input" value="50"/>
+        <input id="search_depth_input" type="number" value="20"/>
+        / 关联上下文
+        <input id="unified_input" type="number" value="3"/>
         / <button id="compare_btn">对比</button>
     </div>
     <div class="container">
@@ -112,7 +130,7 @@ window.onload = () => {
     </div>
     <div class="container">
         <div id="position_chart"></div>
-        <div id="raw_diff_result" class="diff-result"></div>
+        <div id="formatted_diff_result" class="diff-result"></div>
     </div>
 </body>
 </html>
