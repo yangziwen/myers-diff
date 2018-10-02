@@ -72,7 +72,7 @@ var MyersDiff = Object.assign((function(options) {
             return [];
         }
         let prevPosition = {x: 0, y: 0};
-        let edits = [{type: 'common', lines: []}];
+        let edits = [{type: 'common', lines: [], fromOffset: 0, toOffset: 0}];
         let currentEdit = edits[0];    // can be 'common', 'add', 'delete'
         for (let position of this.getPositions(lastStep)) {
             let {x, y} = prevPosition;
@@ -86,7 +86,7 @@ var MyersDiff = Object.assign((function(options) {
                 newEditType = 'add';
             }
             if (newEditType != currentEdit.type) {
-                currentEdit = {type: newEditType, lines: []};
+                currentEdit = {type: newEditType, lines: [], fromOffset: x, toOffset: y};
                 edits.push(currentEdit);
             }
             if (newEditType == 'delete') {
@@ -98,7 +98,7 @@ var MyersDiff = Object.assign((function(options) {
             }
             if (noChangeStep > 0) {
                 if (currentEdit.type != 'common') {
-                    currentEdit = {type: 'common', lines:[]};
+                    currentEdit = {type: 'common', lines:[], fromOffset: x, toOffset: y};
                     edits.push(currentEdit);
                 }
                 currentEdit.lines.push(...this.srcArr.slice(x, x + noChangeStep));
@@ -109,6 +109,81 @@ var MyersDiff = Object.assign((function(options) {
             edits.shift();
         }
         return edits;
+    },
+    getDiffBlocks(lastStep, unified) {
+        let edits = this.getEdits(lastStep);
+        if (!edits || edits.length == 0) {
+            return [];
+        }
+        if (!edits.find(edit => edit.type != 'common')) {
+            return [];
+        }
+        !unified && unified !== 0 && (unified = 3);
+        let currentBlock = {edits: [edits[0]]}
+        let blocks = [currentBlock];
+        let lastEdit = edits.slice(-1)[0];
+        for (let i = 1; i < edits.length; i++) {
+            let edit = edits[i];
+            if (['delete', 'add'].includes(edit.type)) {
+                currentBlock.edits.push(edit);
+                continue;
+            }
+            if (edit.type == 'common') {
+                currentBlock.edits.push(edit);
+                if (edit.lines.length > 2 * unified && edit !== lastEdit) {
+                    currentBlock = {edits: [edit]};
+                    blocks.push(currentBlock);
+                }
+            }
+        }
+        for (let block of blocks) {
+            let edits = block.edits;
+            let firstEdit = edits[0];
+            let lastEdit = edits.slice(-1)[0];
+            let middleEdits = edits.slice(1, -1);
+            let firstEditLines = [];
+            let lastEditLines = [];
+            if (firstEdit.type == 'common' && firstEdit.lines.length > unified) {
+                block.fromOffset = firstEdit.fromOffset + firstEdit.lines.length - unified;
+                block.toOffset = firstEdit.toOffset + firstEdit.lines.length - unified;
+                firstEditLines.push(...firstEdit.lines.slice(-unified));
+            } else {
+                block.fromOffset = firstEdit.fromOffset;
+                block.toOffset = firstEdit.toOffset;
+                firstEditLines.push(...firstEdit.lines);
+            }
+            if (lastEdit.type == 'common' && lastEdit.lines.length > unified) {
+                block.fromLineCount = lastEdit.fromOffset - block.fromOffset + unified;
+                block.toLineCount = lastEdit.toOffset - block.toOffset + unified;
+                lastEditLines.push(...lastEdit.lines.slice(0, unified));
+            } else {
+                block.fromLineCount = lastEdit.fromOffset - block.fromOffset + lastEdit.lines.length;
+                block.toLineCount = lastEdit.toOffset - block.toOffset + lastEdit.lines.length;
+                lastEditLines.push(...lastEdit.lines);
+            }
+            let lines = [`@@ -${block.fromOffset + 1},${block.fromLineCount} +${block.toOffset + 1},${block.toLineCount} @@`];
+            let getPrefix = type => {
+                switch (type) {
+                    case 'delete':
+                        return '-';
+                    case 'add':
+                        return '+';
+                    default:
+                        return ' ';
+                }
+            }
+            lines.push(...firstEditLines.map(line => getPrefix(firstEdit.type) + line));
+            for (let edit of middleEdits) {
+                lines.push(...edit.lines.map(line => getPrefix(edit.type) + line));
+            }
+            lines.push(...lastEditLines.map(line => getPrefix(lastEdit.type) + line));
+            block.lines = lines;
+        }
+        return blocks;
+    },
+    getStandardDiff(lastStep, unified) {
+        let blocks = this.getDiffBlocks(lastStep, unified);
+        return blocks.map(block => block.lines).flatMap(line => line);
     },
     getSimpleDiff(lastStep) {
         let edits = this.getEdits(lastStep);
