@@ -62,12 +62,15 @@ window.onload = () => {
         editors['diffEditor'] = new DiffEditor(monaco, document.getElementById('diff_result'));
     });
 
+    let positionChart = new PositionChart(echarts, document.getElementById('position_chart'));
+
     let stepChart = new StepChart(echarts, document.getElementById('step_chart'), (params, diff) => {
         if (params.componentType == 'series') {
             let [d, k] = params.data;
             editors['diffEditor'].refresh(diff.getEdits({d, k}));
+            positionChart.refresh(diff.getPositions({d, k}));
         }
-    })
+    });
 
     document.getElementById('compare_btn').onclick = ev => {
         let srcText = editors.srcEditor.getValue();
@@ -82,6 +85,7 @@ window.onload = () => {
         diff.calDiff();
         stepChart.refresh(diff);
         editors['diffEditor'].refresh(diff.getEdits());
+        positionChart.refresh(diff.getBestPositions());
     };
 }
 </script>
