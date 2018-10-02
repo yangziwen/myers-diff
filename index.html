@@ -30,7 +30,7 @@ h1 {
 #search_depth_input {
     width: 60px;
 }
-#step_chart {
+#step_chart, #position_chart {
     width: 580px;
     height: 400px;
     display: inline-block;
@@ -38,98 +38,36 @@ h1 {
 }
 .diff-result {
     display: inline-block;
-}
-#diff_result {
     width: 580px;
     height: 400px;
     border: 1px solid #999;
 }
 </style>
 <script src="js/myers.js"></script>
+<script src="js/diffchart.js"></script>
+<script src="js/diffeditor.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.1.0.rc2/echarts-en.common.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.14.3/min/vs/loader.js"></script>
 <script src="js/require.js" async="true"></script>
 <script>
 require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.14.3/min/vs' }});
 window.onload = () => {
-    let srcTextArea = document.getElementById('src_txt');
-    let dstTextArea = document.getElementById('dst_txt');
-    let diffResult = document.getElementById('diff_result');
     let findAllStepsSel = document.getElementById('find_all_steps_sel');
     let searchDepthInput = document.getElementById('search_depth_input');
-    let chart = echarts.init(document.getElementById('step_chart'));
-    let editors = {diffLineNumbers: {}};
-    window.editors = editors;
+    let editors = {};
 
     require(['vs/editor/editor.main'], function() {
-        editors['srcEditor'] = monaco.editor.create(srcTextArea, {
-            minimap: {
-                enabled: false
-            }
-        });
-        editors['dstEditor'] = monaco.editor.create(dstTextArea, {
-            minimap: {
-                enabled: false
-            }
-        });
-        editors['diffEditor'] = monaco.editor.create(diffResult, {
-            lineNumbers: (originLineNumber) => editors['diffLineNumbers'][originLineNumber],
-            minimap: {
-                enabled: false
-            }
-        });
+        editors['srcEditor'] = new TextEditor(monaco, document.getElementById('src_txt'));
+        editors['dstEditor'] = new TextEditor(monaco, document.getElementById('dst_txt'));
+        editors['diffEditor'] = new DiffEditor(monaco, document.getElementById('diff_result'));
     });
 
-    function generateHighlightDecorations(edits) {
-        let lineNumber = 0;
-        let decorations = [];
-        for (let edit of edits) {
-            if (!['delete', 'add'].includes(edit.type)) {
-                lineNumber += edit.lines.length;
-                continue;
-            }
-            decorations.push({
-                range: new monaco.Range(lineNumber + 1, 1, lineNumber + edit.lines.length, 1),
-                options: {
-                    isWholeLine: true,
-                    className: `decoration-${edit.type}`
-                }
-            })
-            lineNumber += edit.lines.length;
+    let stepChart = new StepChart(echarts, document.getElementById('step_chart'), (params, diff) => {
+        if (params.componentType == 'series') {
+            let [d, k] = params.data;
+            editors['diffEditor'].refresh(diff.getEdits({d, k}));
         }
-        return decorations;
-    }
-
-    function generateLineNumbers(edits) {
-        let lineNumbers = {};
-        let totalLineNumber = 0;
-        let srcLineNumber = 0;
-        let dstLineNumber = 0;
-        for (let edit of edits) {
-            for (let i = 0; i < edit.lines.length; i++) {
-                totalLineNumber++;
-                if (edit.type == 'delete') {
-                    srcLineNumber ++;
-                    lineNumbers[totalLineNumber] = srcLineNumber;
-                } else if (edit.type == 'add') {
-                    dstLineNumber ++;
-                    lineNumbers[totalLineNumber] = '';
-                } else if (edit.type == 'common') {
-                    srcLineNumber ++;
-                    dstLineNumber ++;
-                    lineNumbers[totalLineNumber] = srcLineNumber;
-                }
-            }
-        }
-        return lineNumbers;
-    }
-
-    function refreshDiffEditor(edits, el) {
-        editors['diffLineNumbers'] = generateLineNumbers(edits);
-        let diffEditor = editors['diffEditor'];
-        diffEditor.setValue(edits.map(edit => edit.lines).flatMap(line => line).join('\n'));
-        diffEditor.deltaDecorations([], generateHighlightDecorations(edits));
-    }
+    })
 
     document.getElementById('compare_btn').onclick = ev => {
         let srcText = editors.srcEditor.getValue();
@@ -142,106 +80,9 @@ window.onload = () => {
             maxSearchDepth: searchDepthInput.value
         });
         diff.calDiff();
-        refreshChart(diff);
-        window.diff = diff;
-        refreshDiffEditor(diff.getEdits(), diffResult);
+        stepChart.refresh(diff);
+        editors['diffEditor'].refresh(diff.getEdits());
     };
-
-    chart.on('click', params => {
-        if (params.componentType == 'series') {
-            let [d, k] = params.data;
-            refreshDiffEditor(diff.getEdits({d, k}), diffResult);
-        }
-    });
-
-    function refreshChart(diff) {
-        let stepSet = new Set();
-        let series = [];
-        for (let finalStep of diff.getFinalSteps()) {
-            let data = generateDataByLastStep(diff, finalStep, stepSet);
-            if (data.length <= 1) {
-                continue;
-            }
-            series.push({type: 'line', data});
-        }
-        for (let d of Object.keys(diff.prevStepMapping).reverse()) {
-            for (let k of Object.keys(diff.prevStepMapping[d])) {
-                let data = generateDataByLastStep(diff, {d, k}, stepSet);
-                if (data.length <= 1) {
-                    continue;
-                }
-                series.push({
-                    type: 'line',
-                    lineStyle: {
-                        normal: {
-                            type: 'dashed'
-                        }
-                    },
-                    data
-                });
-            }
-        }
-        chart.setOption({
-            title: {
-                text: '',
-                x: 'center'
-            },
-            tooltip: {
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                borderColor: '#ccc',
-                borderWidth: 1,
-                textStyle: {
-                    color: '#666'
-                },
-                formatter(params) {
-                    let [d, k] = params.data;
-                    let pos = diff.getPosition(d, k);
-                    return [
-                        `pos: (x=${pos.x}, y=${pos.y})`,
-                        `step: (d=${d}, k=${k})`
-                    ].join('<br/>')
-                }
-            },
-            animation: false,
-            grid: {
-                left: 35,
-                right: 20,
-                top: 20,
-                bottom: 35
-            },
-            dataZoom: {
-                type: 'inside',
-                zoomOnMouseWheel: 'ctrl'
-            },
-            xAxis: {
-                name: 'd',
-                nameLocation: 'middle',
-                type: 'value'
-            },
-            yAxis: {
-                name: 'k = x - y',
-                nameLocation: 'middle',
-                type: 'value'
-            },
-            series: series
-        }, true);
-    }
-
-    function generateDataByLastStep(diff, lastStep, stepSet) {
-        let steps = diff.getSteps(lastStep).map(step => {
-            step.key = step.d + ',' + step.k;
-            return step;
-        });
-        let data = [];
-        for (let step of steps.reverse()) {
-            data.unshift([step.d, step.k]);
-            if (stepSet.has(step.key)) {
-                break;
-            }
-            stepSet.add(step.key);
-        }
-        return data;
-    }
 }
 </script>
 </head>
@@ -259,11 +100,15 @@ window.onload = () => {
         </select>
         / 搜索深度
         <input id="search_depth_input" value="1000"/>
-        / <button id="compare_btn">比较</button>
+        / <button id="compare_btn">对比</button>
     </div>
     <div class="container">
         <div id="step_chart"></div>
         <div id="diff_result" class="diff-result"></div>
+    </div>
+    <div class="container">
+        <div id="position_chart"></div>
+        <div id="raw_diff_result" class="diff-result"></div>
     </div>
 </body>
 </html>
