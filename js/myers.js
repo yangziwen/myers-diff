@@ -66,32 +66,61 @@ var MyersDiff = Object.assign((function(options) {
         }
         return steps;
     },
-    getSimpleDiff(lastStep) {
+    getEdits(lastStep) {
         lastStep || (lastStep = this.getBestFinalStep());
         if (!lastStep) {
             return [];
         }
-        var lines = [];
         let prevPosition = {x: 0, y: 0};
-        let positions = this.getPositions(lastStep);
-        for (let position of positions) {
+        let edits = [{type: 'common', lines: []}];
+        let currentEdit = edits[0];    // can be 'common', 'add', 'delete'
+        for (let position of this.getPositions(lastStep)) {
             let {x, y} = prevPosition;
             let stepX = position.x - prevPosition.x;
             let stepY = position.y - prevPosition.y;
             let noChangeStep = Math.min(stepX, stepY);
+            let newEditType = 'common';
             if (stepX > stepY) {
-                lines.push('- ' + this.srcArr[prevPosition.x]);
-                x++;
+                newEditType = 'delete';
             } else if (stepX < stepY) {
-                lines.push('+ ' + this.dstArr[prevPosition.y]);
+                newEditType = 'add';
+            }
+            if (newEditType != currentEdit.type) {
+                currentEdit = {type: newEditType, lines: []};
+                edits.push(currentEdit);
+            }
+            if (newEditType == 'delete') {
+                currentEdit.lines.push(this.srcArr[prevPosition.x]);
+                x++;
+            } else if (newEditType == 'add') {
+                currentEdit.lines.push(this.dstArr[prevPosition.y]);
                 y++;
             }
             if (noChangeStep > 0) {
-                this.srcArr.slice(x, x + noChangeStep).forEach(value => {
-                    lines.push('  ' + value);
-                });
+                if (currentEdit.type != 'common') {
+                    currentEdit = {type: 'common', lines:[]};
+                    edits.push(currentEdit);
+                }
+                currentEdit.lines.push(...this.srcArr.slice(x, x + noChangeStep));
             }
             prevPosition = position;
+        }
+        if (edits[0].lines.length == 0) {
+            edits.shift();
+        }
+        return edits;
+    },
+    getSimpleDiff(lastStep) {
+        let edits = this.getEdits(lastStep);
+        let lines = [];
+        for (let edit of edits) {
+            if (edit.type == 'common') {
+                lines.push(...edit.lines.map(line => '  ' + line));
+            } else if (edit.type == 'delete') {
+                lines.push(...edit.lines.map(line => '- ' + line));
+            } else if (edit.type == 'add') {
+                lines.push(...edit.lines.map(line => '+ ' + line));
+            }
         }
         return lines;
     },
