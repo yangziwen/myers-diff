@@ -2,7 +2,7 @@
 <head>
 <style>
 div {
-    font-size: 14px;
+    font-size: 12px;
 }
 h1 {
     text-align: center;
@@ -11,13 +11,21 @@ h1 {
     margin: 0px auto;
     width: 1180px;
 }
-textarea.diff_area {
+.diff_area {
     width: 580px;
     height: 300px;
+    border: 1px solid #999;
+    display: inline-block;
 }
 .operation-container {
     margin: 10px auto;
     width: 350px;
+}
+.decoration-delete {
+    background-color: lightcoral
+}
+.decoration-add {
+    background-color:lightgreen
 }
 #search_depth_input {
     width: 60px;
@@ -34,11 +42,15 @@ textarea.diff_area {
 #diff_result {
     width: 580px;
     height: 400px;
+    border: 1px solid #999;
 }
 </style>
 <script src="js/myers.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.1.0.rc2/echarts-en.common.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.14.3/min/vs/loader.js"></script>
+<script src="js/require.js" async="true"></script>
 <script>
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.14.3/min/vs' }});
 window.onload = () => {
     let srcTextArea = document.getElementById('src_txt');
     let dstTextArea = document.getElementById('dst_txt');
@@ -46,10 +58,82 @@ window.onload = () => {
     let findAllStepsSel = document.getElementById('find_all_steps_sel');
     let searchDepthInput = document.getElementById('search_depth_input');
     let chart = echarts.init(document.getElementById('step_chart'));
+    let editors = {diffLineNumbers: {}};
+    window.editors = editors;
+
+    require(['vs/editor/editor.main'], function() {
+        editors['srcEditor'] = monaco.editor.create(srcTextArea, {
+            minimap: {
+                enabled: false
+            }
+        });
+        editors['dstEditor'] = monaco.editor.create(dstTextArea, {
+            minimap: {
+                enabled: false
+            }
+        });
+        editors['diffEditor'] = monaco.editor.create(diffResult, {
+            lineNumbers: (originLineNumber) => editors['diffLineNumbers'][originLineNumber],
+            minimap: {
+                enabled: false
+            }
+        });
+    });
+
+    function generateHighlightDecorations(edits) {
+        let lineNumber = 0;
+        let decorations = [];
+        for (let edit of edits) {
+            if (!['delete', 'add'].includes(edit.type)) {
+                lineNumber += edit.lines.length;
+                continue;
+            }
+            decorations.push({
+                range: new monaco.Range(lineNumber + 1, 1, lineNumber + edit.lines.length, 1),
+                options: {
+                    isWholeLine: true,
+                    className: `decoration-${edit.type}`
+                }
+            })
+            lineNumber += edit.lines.length;
+        }
+        return decorations;
+    }
+
+    function generateLineNumbers(edits) {
+        let lineNumbers = {};
+        let totalLineNumber = 0;
+        let srcLineNumber = 0;
+        let dstLineNumber = 0;
+        for (let edit of edits) {
+            for (let i = 0; i < edit.lines.length; i++) {
+                totalLineNumber++;
+                if (edit.type == 'delete') {
+                    srcLineNumber ++;
+                    lineNumbers[totalLineNumber] = srcLineNumber;
+                } else if (edit.type == 'add') {
+                    dstLineNumber ++;
+                    lineNumbers[totalLineNumber] = '';
+                } else if (edit.type == 'common') {
+                    srcLineNumber ++;
+                    dstLineNumber ++;
+                    lineNumbers[totalLineNumber] = srcLineNumber;
+                }
+            }
+        }
+        return lineNumbers;
+    }
+
+    function refreshDiffEditor(edits, el) {
+        editors['diffLineNumbers'] = generateLineNumbers(edits);
+        let diffEditor = editors['diffEditor'];
+        diffEditor.setValue(edits.map(edit => edit.lines).flatMap(line => line).join('\n'));
+        diffEditor.deltaDecorations([], generateHighlightDecorations(edits));
+    }
 
     document.getElementById('compare_btn').onclick = ev => {
-        let srcText = srcTextArea.value;
-        let dstText = dstTextArea.value;
+        let srcText = editors.srcEditor.getValue();
+        let dstText = editors.dstEditor.getValue();
         let findAllSteps = findAllStepsSel.value === 'true';
         let diff = new MyersDiff({
             srcArr: srcText.split(/\r|\n/),
@@ -57,15 +141,16 @@ window.onload = () => {
             findAllSteps,
             maxSearchDepth: searchDepthInput.value
         });
-        diffResult.value = diff.calDiff().getSimpleDiff().join('\n');
-        window.diff = diff;
+        diff.calDiff();
         refreshChart(diff);
+        window.diff = diff;
+        refreshDiffEditor(diff.getEdits(), diffResult);
     };
 
     chart.on('click', params => {
         if (params.componentType == 'series') {
             let [d, k] = params.data;
-            diffResult.value = diff.getSimpleDiff({d, k}).join('\n');
+            refreshDiffEditor(diff.getEdits({d, k}), diffResult);
         }
     });
 
@@ -73,7 +158,7 @@ window.onload = () => {
         let stepSet = new Set();
         let series = [];
         for (let finalStep of diff.getFinalSteps()) {
-            let data = generateDataByLastStep(finalStep, stepSet);
+            let data = generateDataByLastStep(diff, finalStep, stepSet);
             if (data.length <= 1) {
                 continue;
             }
@@ -81,7 +166,7 @@ window.onload = () => {
         }
         for (let d of Object.keys(diff.prevStepMapping).reverse()) {
             for (let k of Object.keys(diff.prevStepMapping[d])) {
-                let data = generateDataByLastStep({d, k}, stepSet);
+                let data = generateDataByLastStep(diff, {d, k}, stepSet);
                 if (data.length <= 1) {
                     continue;
                 }
@@ -142,7 +227,7 @@ window.onload = () => {
         }, true);
     }
 
-    function generateDataByLastStep(lastStep, stepSet) {
+    function generateDataByLastStep(diff, lastStep, stepSet) {
         let steps = diff.getSteps(lastStep).map(step => {
             step.key = step.d + ',' + step.k;
             return step;
@@ -163,8 +248,8 @@ window.onload = () => {
 <body>
     <h1>基于Myers算法的文本比对工具</h1>
     <div class="container">
-        <textarea id="src_txt" class="diff_area" placeholder="请输入源文件内容"></textarea>
-        <textarea id="dst_txt" class="diff_area" placeholder="请输入目标文件内容"></textarea>
+        <div id="src_txt" class="diff_area"></div>
+        <div id="dst_txt" class="diff_area"></div>
     </div>
     <div class="operation-container">
         计算所有路径
@@ -178,9 +263,7 @@ window.onload = () => {
     </div>
     <div class="container">
         <div id="step_chart"></div>
-        <div class="diff-result">
-            <textarea id="diff_result"></textarea>
-        </div>
+        <div id="diff_result" class="diff-result"></div>
     </div>
 </body>
 </html>
