@@ -1,7 +1,7 @@
 var PositionChart = Object.assign((function(echarts, el) {
     this.chart = echarts.init(el);
 }).prototype, {
-    refresh(positions) {
+    refresh(positions, shortcuts) {
         let originData = positions.map(pos => [pos.x, pos.y]);
         let prevPos = [0, 0];
         let data = [prevPos];
@@ -20,6 +20,26 @@ var PositionChart = Object.assign((function(echarts, el) {
                 data.push([x0 + i, y0 + i]);
             }
             prevPos = pos;
+        }
+        let series = [{
+            type: 'line',
+            showSymbol: false,
+            z: 10,
+            data: data
+        }];
+        if (shortcuts) {
+            for (let data of shortcuts) {
+                series.push({
+                    type: 'line',
+                    showSymbol: false,
+                    lineStyle: {
+                        color: '#ccc',
+                        width: 1
+                    },
+                    z: 1,
+                    data: data
+                })
+            }
         }
         this.chart.setOption({
             title: {},
@@ -55,7 +75,10 @@ var PositionChart = Object.assign((function(echarts, el) {
                 nameLocation: 'middle',
                 type: 'value',
                 min: 'dataMin',
-                max: 'dataMax'
+                max: 'dataMax',
+                splitLine: {
+                    show: true
+                }
             },
             yAxis: {
                 name: 'y',
@@ -63,13 +86,12 @@ var PositionChart = Object.assign((function(echarts, el) {
                 type: 'value',
                 min: 'dataMin',
                 max: 'dataMax',
-                inverse: true
+                inverse: true,
+                splitLine: {
+                    show: true
+                }
             },
-            series: [{
-                type: 'line',
-                showSymbol: false,
-                data: data
-            }]
+            series
         }, true);
     }
 }).constructor;

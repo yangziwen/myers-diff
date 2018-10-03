@@ -1,6 +1,6 @@
 var MyersDiff = Object.assign((function(options) {
-    this.srcArr = options.srcArr;
-    this.dstArr = options.dstArr;
+    this.srcLines = options.srcLines;
+    this.dstLines = options.dstLines;
     this.mapping = {};  // key is [d][k], value is the matrix position
     this.prevStepMapping = {}; // key is [d][k], value is the previous d,k
     let maxSearchDepth = parseInt(options.maxSearchDepth);
@@ -90,10 +90,10 @@ var MyersDiff = Object.assign((function(options) {
                 edits.push(currentEdit);
             }
             if (newEditType == 'delete') {
-                currentEdit.lines.push(this.srcArr[prevPosition.x]);
+                currentEdit.lines.push(this.srcLines[prevPosition.x]);
                 x++;
             } else if (newEditType == 'add') {
-                currentEdit.lines.push(this.dstArr[prevPosition.y]);
+                currentEdit.lines.push(this.dstLines[prevPosition.y]);
                 y++;
             }
             if (noChangeStep > 0) {
@@ -101,7 +101,7 @@ var MyersDiff = Object.assign((function(options) {
                     currentEdit = {type: 'common', lines:[], fromOffset: x, toOffset: y};
                     edits.push(currentEdit);
                 }
-                currentEdit.lines.push(...this.srcArr.slice(x, x + noChangeStep));
+                currentEdit.lines.push(...this.srcLines.slice(x, x + noChangeStep));
             }
             prevPosition = position;
         }
@@ -217,7 +217,7 @@ var MyersDiff = Object.assign((function(options) {
         this.getSimpleDiff(lastStep).forEach(line => console.log(line));
     },
     calDiff() {
-        let depth = Math.min(this.maxSearchDepth, this.srcArr.length + this.dstArr.length);
+        let depth = Math.min(this.maxSearchDepth, this.srcLines.length + this.dstLines.length);
         for (let d = 0; d <= depth; d++) {
             if (this.foundBestSteps && !this.findAllSteps) {
                 break;
@@ -225,6 +225,45 @@ var MyersDiff = Object.assign((function(options) {
             this.calAndAddPositions(d);
         }
         return this;
+    },
+    calShortcutLines() {
+        var srcPosMapping = {};
+        for (let i = 0; i < this.srcLines.length; i++) {
+            let line = this.srcLines[i];
+            let posList = srcPosMapping[line] || (srcPosMapping[line] = []);
+            posList.push(i);
+        }
+        let shortcutStarts = [];
+        let shortcutStartMapping = {};
+        let shortcutHeads = {};
+        for (let i = 0; i < this.dstLines.length; i++) {
+            let line = this.dstLines[i];
+            if (srcPosMapping[line]) {
+                let points = srcPosMapping[line].map(srcPos => [srcPos, i]);
+                for (let point of points) {
+                    let key = point.join(',');
+                    let prevKey = point.map(v => v - 1).join(',');
+                    let nextKey = point.map(v => v + 1).join(',');
+                    if (shortcutHeads[key]) {
+                        continue;
+                    } else if (shortcutHeads[prevKey]) {
+                        shortcutHeads[prevKey].push(point);
+                        continue;
+                    } else if (shortcutHeads[nextKey]) {
+                        (shortcutHeads[key] = shortcutHeads[nextKey]).unshift(point);
+                        delete shortcutHeads[nextKey];
+                        continue;
+                    } else {
+                        shortcutHeads[key] = [point];
+                    }
+                }
+            }
+        }
+        return Object.values(shortcutHeads)
+            .map(points => {
+                points.push(points.slice(-1)[0].map(v => v + 1));
+                return points;
+            });
     },
     calAndAddPositions(d) {
         for (let k = d; k >= -d; k -= 2) {
@@ -240,8 +279,8 @@ var MyersDiff = Object.assign((function(options) {
     calPosition(d, k) {
         if (d <=0) {
             let x = 0, y = 0;
-            while (x < this.srcArr.length && y < this.dstArr.length
-                    && this.srcArr[x] == this.dstArr[y]) {
+            while (x < this.srcLines.length && y < this.dstLines.length
+                    && this.srcLines[x] == this.dstLines[y]) {
                 x++;
                 y++;
             }
@@ -259,15 +298,15 @@ var MyersDiff = Object.assign((function(options) {
             let {x, y} = prevPosition;
             k > k0 && x++;
             k < k0 && y++;
-            if (x > this.srcArr.length || y > this.dstArr.length) {
+            if (x > this.srcLines.length || y > this.dstLines.length) {
                 return this.NOT_EXIST_POSITION;
             }
-            while (x < this.srcArr.length && y < this.dstArr.length 
-                    && this.srcArr[x] == this.dstArr[y]) {
+            while (x < this.srcLines.length && y < this.dstLines.length
+                    && this.srcLines[x] == this.dstLines[y]) {
                 x++;
                 y++;
             }
-            if (x == this.srcArr.length && y == this.dstArr.length) {
+            if (x == this.srcLines.length && y == this.dstLines.length) {
                 this.finalSteps.push({d, k});
                 if (!this.foundBestSteps) {
                     this.foundBestSteps = true;

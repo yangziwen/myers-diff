@@ -83,7 +83,7 @@ window.onload = () => {
             let [d, k] = params.data;
             editors['diffEditor'].refresh(diff.getEdits({d, k}));
             editors['diffBlockEditor'].refresh(diff.getStandardDiff({d, k}));
-            positionChart.refresh(diff.getPositions({d, k}));
+            positionChart.refresh(diff.getPositions({d, k}), diff.calShortcutLines());
         }
     });
 
@@ -92,8 +92,8 @@ window.onload = () => {
         let dstText = editors.dstEditor.getValue();
         let findAllSteps = findAllStepsSel.value === 'true';
         let diff = new MyersDiff({
-            srcArr: srcText.split(/\r|\n/),
-            dstArr: dstText.split(/\r|\n/), 
+            srcLines: srcText.split(/\r|\n/),
+            dstLines: dstText.split(/\r|\n/),
             findAllSteps,
             maxSearchDepth: searchDepthInput.value
         });
@@ -101,7 +101,7 @@ window.onload = () => {
         stepChart.refresh(diff);
         editors['diffEditor'].refresh(diff.getEdits());
         editors['diffBlockEditor'].refresh(diff.getStandardDiff(null, unifiedInput.value));
-        positionChart.refresh(diff.getBestPositions());
+        positionChart.refresh(diff.getBestPositions(), diff.calShortcutLines());
     };
 }
 </script>
