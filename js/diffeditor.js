@@ -90,23 +90,22 @@ var DiffBlockEditor = Object.assign((function(monaco, el) {
         let prevLineNumber = 0;
         let decorations = [];
         let prevPrefix = ' ';
-        for (let line of lines) {
+        for (let line of [...lines, '']) {
             lineNumber++;
             let prefix = line.charAt(0);
             if (prefix !== prevPrefix) {
                 if (prevLineNumber > 0) {
-                    let lineType = ({
+                    let prevLineType = ({
                         '@': 'header',
                         '+': 'add',
                         '-': 'delete'
                     })[prevPrefix];
-                    if (lineType) {
+                    if (prevLineType) {
                         decorations.push({
-                            range: new this.monaco.Range(prevLineNumber, 1, lineNumber, 0),
+                            range: new this.monaco.Range(prevLineNumber, 1, lineNumber - 1, (lines[lineNumber - 2] || '').length + 1),
                             options: {
                                 isWholeline: true,
-                                className: `decoration-${lineType}`,
-                                inlineClassName: `decoration-${lineType}`
+                                inlineClassName: `decoration-${prevLineType}`
                             }
                         })
                     }

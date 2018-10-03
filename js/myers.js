@@ -165,11 +165,15 @@ var MyersDiff = Object.assign((function(options) {
                 block.toLineCount = lastEdit.toOffset - block.toOffset + unified;
                 lastEditLines.push(...lastEdit.lines.slice(0, unified));
             } else {
-                block.fromLineCount = lastEdit.fromOffset - block.fromOffset + lastEdit.lines.length;
-                block.toLineCount = lastEdit.toOffset - block.toOffset + lastEdit.lines.length;
+                let lastEditFromLineCount = lastEdit.type != 'add' ? lastEdit.lines.length : 0;
+                let lastEditToLineCount = lastEdit.type != 'delete' ? lastEdit.lines.length : 0;
+                block.fromLineCount = lastEdit.fromOffset - block.fromOffset + lastEditFromLineCount;
+                block.toLineCount = lastEdit.toOffset - block.toOffset + lastEditToLineCount;
                 lastEditLines.push(...lastEdit.lines);
             }
-            let lines = [`@@ -${block.fromOffset + 1},${block.fromLineCount} +${block.toOffset + 1},${block.toLineCount} @@`];
+            let fromLineNumber = block.fromOffset + (block.fromLineCount > 0 ? 1 : 0);
+            let toLineNumber = block.toOffset + (block.toLineCount > 0 ? 1 : 0);
+            let lines = [`@@ -${fromLineNumber},${block.fromLineCount} +${toLineNumber},${block.toLineCount} @@`];
             let getPrefix = type => {
                 switch (type) {
                     case 'delete':
@@ -184,7 +188,9 @@ var MyersDiff = Object.assign((function(options) {
             for (let edit of middleEdits) {
                 lines.push(...edit.lines.map(line => getPrefix(edit.type) + line));
             }
-            lines.push(...lastEditLines.map(line => getPrefix(lastEdit.type) + line));
+            if (firstEdit !== lastEdit) {
+                lines.push(...lastEditLines.map(line => getPrefix(lastEdit.type) + line));
+            }
             block.lines = lines;
         }
         return blocks;
