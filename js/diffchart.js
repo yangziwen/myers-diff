@@ -27,7 +27,7 @@ var PositionChart = Object.assign((function(echarts, el) {
             z: 10,
             data: data
         }];
-        if (shortcuts) {
+        if (shortcuts && shortcuts.length < 100) {
             for (let data of shortcuts) {
                 series.push({
                     type: 'line',

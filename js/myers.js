@@ -213,9 +213,6 @@ var MyersDiff = Object.assign((function(options) {
         }
         return lines;
     },
-    showSimpleDiff(lastStep) {
-        this.getSimpleDiff(lastStep).forEach(line => console.log(line));
-    },
     calDiff() {
         let depth = Math.min(this.maxSearchDepth, this.srcLines.length + this.dstLines.length);
         for (let d = 0; d <= depth; d++) {
