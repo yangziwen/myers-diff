@@ -78,7 +78,8 @@ var PositionChart = Object.assign((function(echarts, el) {
                 max: 'dataMax',
                 splitLine: {
                     show: true
-                }
+                },
+                interval: Math.max(...prevPos) <= 20 ? 1 : null
             },
             yAxis: {
                 name: 'y',
@@ -89,7 +90,8 @@ var PositionChart = Object.assign((function(echarts, el) {
                 inverse: true,
                 splitLine: {
                     show: true
-                }
+                },
+                interval: Math.max(...prevPos) <= 20 ? 1 : null
             },
             series
         }, true);
