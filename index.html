@@ -1,25 +1,22 @@
 <html>
 <head>
 <style>
-div {
-    font-size: 12px;
-}
 h1 {
     text-align: center;
 }
-.container {
+.container-area {
     margin: 0px auto;
-    width: 1180px;
+    width: 1520px;
 }
-.diff_area {
-    width: 580px;
-    height: 300px;
+.diff-area {
+    width: 750px;
+    height: 450px;
     border: 1px solid #999;
     display: inline-block;
 }
 .operation-container {
     margin: 10px auto;
-    width: 450px;
+    width: 680px;
 }
 .decoration-header {
     color: #aa00bb !important;
@@ -43,18 +40,19 @@ h1 {
     width: 40px;
 }
 #step_chart, #position_chart {
-    width: 580px;
-    height: 400px;
+    width: 750px;
+    height: 450px;
     display: inline-block;
     border: 1px solid #999;
 }
 .diff-result {
     display: inline-block;
-    width: 580px;
-    height: 400px;
+    width: 750px;
+    height: 450px;
     border: 1px solid #999;
 }
 </style>
+<link rel="stylesheet" href="css/bootstrap.min.css">
 <script src="js/myers.js"></script>
 <script src="js/diffchart.js"></script>
 <script src="js/diffeditor.js"></script>
@@ -108,27 +106,30 @@ window.onload = () => {
 </head>
 <body>
     <h1>基于Myers算法的文本比对工具</h1>
-    <div class="container">
-        <div id="src_txt" class="diff_area"></div>
-        <div id="dst_txt" class="diff_area"></div>
+    <div class="container-area">
+        <div id="src_txt" class="diff-area"></div>
+        <div id="dst_txt" class="diff-area"></div>
     </div>
     <div class="operation-container">
         计算所有路径
-        <select id="find_all_steps_sel">
+        <select id="find_all_steps_sel" class="form-control-sm" style="width: 60px;">
             <option value="true">是</option>
             <option value="false" selected>否</option>
         </select>
-        / 搜索深度(d)
-        <input id="search_depth_input" type="number" value="100"/>
-        / 关联上下文(U)
-        <input id="unified_input" type="number" value="3"/>
-        / <button id="compare_btn">对比</button>
+        &nbsp;/&nbsp;
+        搜索深度(d)
+        <input id="search_depth_input" type="number" class="form-control-sm" style="width: 100px; border-width: 1px;" value="100"/>
+        &nbsp;/&nbsp;
+        关联上下文(U)
+        <input id="unified_input" type="number" class="form-control-sm" style="width: 100px; border-width: 1px;" value="3"/>
+        &nbsp;/&nbsp;
+        <button id="compare_btn" type="button" class="btn btn-primary btn-sm">对比</button>
     </div>
-    <div class="container">
+    <div class="container-area">
         <div id="step_chart"></div>
         <div id="diff_result" class="diff-result"></div>
     </div>
-    <div class="container">
+    <div class="container-area">
         <div id="position_chart"></div>
         <div id="formatted_diff_result" class="diff-result"></div>
     </div>
