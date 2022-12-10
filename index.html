@@ -13,6 +13,7 @@ h1 {
     height: 450px;
     border: 1px solid #999;
     display: inline-block;
+    position: relative;
 }
 .operation-container {
     margin: 10px auto;
@@ -32,6 +33,16 @@ h1 {
 }
 .decoration-add-background {
     background-color:lightgreen
+}
+.diff-placeholder {
+    _display: none;
+    position: absolute;
+    top: 0;
+    left: 65px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.7;
+    font-size: 14px;
 }
 #search_depth_input {
     width: 40px;
@@ -68,8 +79,8 @@ window.onload = () => {
     let editors = {};
 
     require(['vs/editor/editor.main'], function() {
-        editors['srcEditor'] = new TextEditor(monaco, document.getElementById('src_txt'));
-        editors['dstEditor'] = new TextEditor(monaco, document.getElementById('dst_txt'));
+        editors['srcEditor'] = new TextEditor(monaco, document.getElementById('src_txt'), {fontSize: '14px'});
+        editors['dstEditor'] = new TextEditor(monaco, document.getElementById('dst_txt'), {fontSize: '14px'});
         editors['diffEditor'] = new DiffEditor(monaco, document.getElementById('diff_result'));
         editors['diffBlockEditor'] = new DiffBlockEditor(monaco, document.getElementById('formatted_diff_result'));
     });
@@ -107,8 +118,12 @@ window.onload = () => {
 <body>
     <h1>基于Myers算法的文本比对工具</h1>
     <div class="container-area">
-        <div id="src_txt" class="diff-area"></div>
-        <div id="dst_txt" class="diff-area"></div>
+        <div id="src_txt" class="diff-area">
+            <div class="diff-placeholder">请输入待比对的源文本内容</div>
+        </div>
+        <div id="dst_txt" class="diff-area">
+            <div class="diff-placeholder">请输入待比对的目标文本内容</div>
+        </div>
     </div>
     <div class="operation-container">
         计算所有路径

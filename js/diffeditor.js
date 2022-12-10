@@ -1,10 +1,24 @@
-var TextEditor = Object.assign((function(monaco, el) {
+var TextEditor = Object.assign((function(monaco, el, options={}) {
     this.monaco = monaco;
-    this.editor = monaco.editor.create(el, {
+    this.editor = monaco.editor.create(el, Object.assign({
         minimap: {
             enabled: false
         }
-    });
+    }, options));
+    if (el.firstElementChild.className.indexOf('diff-placeholder') >= 0) {
+        const placeholderEl = el.firstElementChild;
+        this.editor.onDidFocusEditorWidget(() => {
+            placeholderEl.style.display = 'none';
+        });
+        this.editor.onDidBlurEditorWidget(() => {
+            if (this.editor.getValue()) {
+                placeholderEl.style.display = 'none';
+            } else {
+                placeholderEl.style.display = "initial";
+            }
+        });
+    }
+      
 }).prototype, {
     getValue() {
         return this.editor.getValue();
