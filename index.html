@@ -6,14 +6,23 @@ h1, h2 {
 }
 .container-area {
     margin: 0px auto;
-    width: 1520px;
+    width: 1540px;
 }
 .diff-area {
     width: 750px;
     height: 600px;
-    border: 1px solid #999;
     display: inline-block;
     position: relative;
+}
+.area-wrapper {
+    width: 750px; 
+    max-height: 600px; 
+    min-height: 450px;
+    overflow: hidden; 
+    border-radius: 10px; 
+    border: 1px solid #999;
+    display: inline-block;
+    margin: 0px 5px;
 }
 .operation-container {
     margin: 10px auto;
@@ -54,13 +63,11 @@ h1, h2 {
     width: 750px;
     height: 450px;
     display: inline-block;
-    border: 1px solid #999;
 }
 .diff-result {
     display: inline-block;
     width: 750px;
     height: 450px;
-    border: 1px solid #999;
 }
 </style>
 <link rel="stylesheet" href="css/bootstrap.min.css">
@@ -107,10 +114,9 @@ window.onload = () => {
             maxSearchDepth: searchDepthInput.value
         });
         diff.calDiff();
-        document.getElementById('diff_result').style.visibility = 'visible';
-        document.getElementById('formatted_diff_result').style.visibility = 'visible';
-        document.getElementById('step_chart').style.visibility = 'visible';
-        document.getElementById('position_chart').style.visibility = 'visible';
+        for (let wrapper of document.getElementsByClassName('area-wrapper')) {
+            wrapper.style.visibility = 'visible';
+        }
         document.getElementById('outside_area').style.overflowY = 'visible';
         stepChart.refresh(diff);
         editors['diffEditor'].refresh(diff.getEdits());
@@ -126,11 +132,15 @@ window.onload = () => {
             <h2>基于Myers算法的文本比对工具</h2>
         </div>
         <div class="container-area">
-            <div id="src_txt" class="diff-area">
-                <div class="diff-placeholder">请输入待对比的源文本内容</div>
+            <div class="area-wrapper">
+                <div id="src_txt" class="diff-area">
+                    <div class="diff-placeholder">请输入待对比的源文本内容</div>
+                </div>
             </div>
-            <div id="dst_txt" class="diff-area">
-                <div class="diff-placeholder">请输入待对比的目标文本内容</div>
+            <div class="area-wrapper">
+                <div id="dst_txt" class="diff-area">
+                    <div class="diff-placeholder">请输入待对比的目标文本内容</div>
+                </div>
             </div>
         </div>
         <div class="operation-container">
@@ -149,12 +159,20 @@ window.onload = () => {
             <button id="compare_btn" type="button" class="btn btn-primary btn-sm">对比</button>
         </div>
         <div class="container-area">
-            <div id="diff_result" class="diff-result" style="visibility: hidden;"></div>
-            <div id="formatted_diff_result" class="diff-result" style="visibility: hidden;"></div>
+            <div class="area-wrapper"  style="visibility: hidden;">
+                <div id="diff_result" class="diff-result"></div>
+            </div>
+            <div class="area-wrapper" style="visibility: hidden;">
+                <div id="formatted_diff_result" class="diff-result"></div>
+            </div>
         </div>
         <div class="container-area">
-            <div id="step_chart" style="visibility: hidden;"></div>
-            <div id="position_chart"  style="visibility: hidden;"></div>
+            <div class="area-wrapper" style="visibility: hidden;">
+                <div id="step_chart"></div>
+            </div>
+            <div class="area-wrapper" style="visibility: hidden;">
+                <div id="position_chart"></div>
+            </div>
         </div>
         <div style="height: 30px;"></div>
     </div>
