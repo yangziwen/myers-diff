@@ -90,6 +90,7 @@ window.onload = () => {
         editors['dstEditor'] = new TextEditor(monaco, document.getElementById('dst_txt'), {fontSize: '14px'});
         editors['diffEditor'] = new DiffEditor(monaco, document.getElementById('diff_result'));
         editors['diffBlockEditor'] = new DiffBlockEditor(monaco, document.getElementById('formatted_diff_result'));
+        document.getElementById('compare_btn').disabled = false;
     });
 
     let positionChart = new PositionChart(echarts, document.getElementById('position_chart'));
@@ -114,6 +115,10 @@ window.onload = () => {
             maxSearchDepth: searchDepthInput.value
         });
         diff.calDiff();
+        if (diff.getEdits().length == 0) {
+            alert('文本内容无差异');
+            return;
+        }
         for (let wrapper of document.getElementsByClassName('area-wrapper')) {
             wrapper.style.visibility = 'visible';
         }
@@ -156,7 +161,7 @@ window.onload = () => {
             关联上下文(U)
             <input id="unified_input" type="number" class="form-control-sm" style="width: 100px; border-width: 1px;" value="3"/>
             &nbsp;/&nbsp;
-            <button id="compare_btn" type="button" class="btn btn-primary btn-sm">对比</button>
+            <button id="compare_btn" type="button" class="btn btn-primary btn-sm" disabled>对比</button>
         </div>
         <div class="container-area">
             <div class="area-wrapper"  style="visibility: hidden;">
