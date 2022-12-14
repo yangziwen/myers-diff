@@ -1,7 +1,7 @@
 # Myers Diff
 
 ### 介绍
-- 本工具提供了基于Myers算法的文本比对功能，并给出了路径搜索过程的可视化结果。([试一试](https://yangziwen.github.io/myersdiff.html))
+- 本工具提供了基于Myers算法的文本比对功能，并给出了路径搜索过程的可视化结果。([试一试](https://yangziwen.github.io/myers-diff/index.html))
 
 ### 使用
 1. 输入待比较的两段文本内容
