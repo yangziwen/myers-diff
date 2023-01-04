@@ -111,6 +111,7 @@ window.onload = () => {
         const language = languageSelector.value;
         editors.srcEditor.changeLanguage(language);
         editors.dstEditor.changeLanguage(language);
+        editors.diffEditor.changeLanguage(language);
     }
 
     document.getElementById('compare_btn').onclick = ev => {
@@ -161,12 +162,12 @@ window.onload = () => {
             选择语言
             <select id="language_sel" class="form-control-sm" style="width: 100px;">
                 <option value="">无</option>
-                <option value="json">json</option>
-                <option value="java">java</option>
-                <option value="javascript">javascript</option>
-                <option value="sql">sql</option>
-                <option value="shell">shell</option>
-                <option value="shell">xml</option>
+                <option>json</option>
+                <option>java</option>
+                <option>javascript</option>
+                <option>sql</option>
+                <option>shell</option>
+                <option>xml</option>
             </select>
             &nbsp;/&nbsp;
             计算所有路径

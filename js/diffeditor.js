@@ -24,7 +24,7 @@ var TextEditor = Object.assign((function(monaco, el, options={}) {
     },
     changeLanguage(language) {
         const oldModel = this.editor.getModel();
-        const newModel = this.monaco.editor.createModel(this.editor.getValue(), language);
+        const newModel = this.monaco.editor.createModel(this.getValue(), language);
         this.editor.setModel(newModel);
         if (oldModel) {
             oldModel.dispose();
@@ -36,6 +36,7 @@ var TextEditor = Object.assign((function(monaco, el, options={}) {
 var DiffEditor = Object.assign((function(monaco, el) {
     this.monaco = monaco;
     this.lineNumbers = {};
+    this.edits = [];
     this.editor = monaco.editor.create(el, {
         lineNumbers: originLineNumber => this.lineNumbers[originLineNumber],
         readOnly: true,
@@ -45,9 +46,19 @@ var DiffEditor = Object.assign((function(monaco, el) {
     });
 }).prototype, {
     refresh(edits) {
+        this.edits = edits;
         this.lineNumbers = this._generateLineNumbers(edits);
         this.editor.setValue(edits.map(edit => edit.lines).flatMap(line => line).join('\n'));
         this.editor.deltaDecorations([], this._generateHighlightDecorations(edits));
+    },
+    changeLanguage(language) {
+        const oldModel = this.editor.getModel();
+        const newModel = this.monaco.editor.createModel(this.editor.getValue(), language);
+        this.editor.setModel(newModel);
+        if (oldModel) {
+            oldModel.dispose();
+        }
+        this.editor.deltaDecorations([], this._generateHighlightDecorations(this.edits));
     },
     _generateHighlightDecorations(edits) {
         let lineNumber = 0;
