@@ -27,7 +27,7 @@ h1, h2 {
 }
 .operation-container {
     margin: 10px auto 15px;
-    width: 680px;
+    width: 900px;
 }
 .decoration-header {
     color: #aa00bb !important;
@@ -105,6 +105,14 @@ window.onload = () => {
         }
     });
 
+    const languageSelector = document.getElementById('language_sel');
+
+    languageSelector.onchange = ev => {
+        const language = languageSelector.value;
+        editors.srcEditor.changeLanguage(language);
+        editors.dstEditor.changeLanguage(language);
+    }
+
     document.getElementById('compare_btn').onclick = ev => {
         let srcText = editors.srcEditor.getValue();
         let dstText = editors.dstEditor.getValue();
@@ -150,6 +158,17 @@ window.onload = () => {
             </div>
         </div>
         <div class="operation-container">
+            选择语言
+            <select id="language_sel" class="form-control-sm" style="width: 100px;">
+                <option value="">无</option>
+                <option value="json">json</option>
+                <option value="java">java</option>
+                <option value="javascript">javascript</option>
+                <option value="sql">sql</option>
+                <option value="shell">shell</option>
+                <option value="shell">xml</option>
+            </select>
+            &nbsp;/&nbsp;
             计算所有路径
             <select id="find_all_steps_sel" class="form-control-sm" style="width: 60px;">
                 <option value="true">是</option>

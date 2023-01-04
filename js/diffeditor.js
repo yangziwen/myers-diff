@@ -18,10 +18,17 @@ var TextEditor = Object.assign((function(monaco, el, options={}) {
             }
         });
     }
-      
 }).prototype, {
     getValue() {
         return this.editor.getValue();
+    },
+    changeLanguage(language) {
+        const oldModel = this.editor.getModel();
+        const newModel = this.monaco.editor.createModel(this.editor.getValue(), language);
+        this.editor.setModel(newModel);
+        if (oldModel) {
+            oldModel.dispose();
+        }
     }
 }).constructor;
 
