@@ -1,0 +1,183 @@
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+h1, h2 {
+    text-align: center;
+}
+.container-area {
+    margin: 0px auto;
+    width: 1425px;
+}
+.diff-area {
+    width: 700px;
+    height: 600px;
+    display: inline-block;
+    position: relative;
+}
+.area-wrapper {
+    width: 700px;
+    max-height: 600px; 
+    min-height: 450px;
+    overflow: hidden; 
+    border-radius: 10px; 
+    border: 1px solid #999;
+    display: inline-block;
+    margin: 0px 5px;
+}
+.operation-container {
+    margin: 10px auto 15px;
+    width: 900px;
+}
+.decoration-header {
+    color: #aa00bb !important;
+}
+.decoration-delete {
+    color: #dd4444 !important;
+}
+.decoration-add {
+    color: #229922 !important;
+}
+.decoration-delete-background {
+    background-color: lightcoral
+}
+.decoration-add-background {
+    background-color:lightgreen
+}
+.diff-placeholder {
+    _display: none;
+    position: absolute;
+    top: 0;
+    left: 65px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.7;
+    font-size: 14px;
+}
+#search_depth_input {
+    width: 40px;
+}
+#unified_input {
+    width: 40px;
+}
+#step_chart, #position_chart {
+    width: 700px;
+    height: 450px;
+    display: inline-block;
+}
+.diff-result {
+    display: inline-block;
+    width: 700px;
+    height: 450px;
+}
+</style>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<script src="js/myers.js"></script>
+<script src="js/diffeditor.js"></script>
+<script src="https://cdn.staticfile.net/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script src="js/require.js" async="true"></script>
+<script>
+require.config({ paths: { 'vs': 'https://cdn.staticfile.net/monaco-editor/0.45.0/min/vs' }});
+window.onload = () => {
+    let findAllStepsSel = document.getElementById('find_all_steps_sel');
+    let searchDepthInput = document.getElementById('search_depth_input');
+    let unifiedInput = document.getElementById('unified_input');
+    let editors = {};
+
+    require(['vs/editor/editor.main'], function() {
+        editors['srcEditor'] = new TextEditor(monaco, document.getElementById('src_txt'), {fontSize: '14px'});
+        editors['dstEditor'] = new TextEditor(monaco, document.getElementById('dst_txt'), {fontSize: '14px'});
+        editors['diffEditor'] = new DiffEditor(monaco, document.getElementById('diff_result'));
+        editors['diffBlockEditor'] = new DiffBlockEditor(monaco, document.getElementById('formatted_diff_result'));
+        document.getElementById('compare_btn').disabled = false;
+    });
+
+    const languageSelector = document.getElementById('language_sel');
+
+    languageSelector.onchange = ev => {
+        const language = languageSelector.value;
+        editors.srcEditor.changeLanguage(language);
+        editors.dstEditor.changeLanguage(language);
+        editors.diffEditor.changeLanguage(language);
+    }
+
+    document.getElementById('compare_btn').onclick = ev => {
+        let srcText = editors.srcEditor.getValue();
+        let dstText = editors.dstEditor.getValue();
+        let findAllSteps = findAllStepsSel.value === 'true';
+        let diff = new MyersDiff({
+            srcLines: srcText.split(/\r|\n/),
+            dstLines: dstText.split(/\r|\n/),
+            findAllSteps,
+            maxSearchDepth: searchDepthInput.value
+        });
+        diff.calDiff();
+        if (diff.getEdits().length == 0) {
+            alert('文本内容无差异');
+            return;
+        }
+        for (let wrapper of document.getElementsByClassName('area-wrapper')) {
+            wrapper.style.visibility = 'visible';
+        }
+        document.getElementById('outside_area').style.overflowY = 'visible';
+        editors['diffEditor'].refresh(diff.getEdits());
+        editors['diffBlockEditor'].refresh(diff.getStandardDiff(null, unifiedInput.value));
+    };
+}
+</script>
+</head>
+<body>
+    <div id="outside_area" style="height: 850px; overflow-y: hidden;">
+        <div style="margin: 15px;">
+            <h2>基于Myers算法的文本比对工具</h2>
+        </div>
+        <div class="container-area">
+            <div class="area-wrapper">
+                <div id="src_txt" class="diff-area">
+                    <div class="diff-placeholder">请输入待对比的源文本内容</div>
+                </div>
+            </div>
+            <div class="area-wrapper">
+                <div id="dst_txt" class="diff-area">
+                    <div class="diff-placeholder">请输入待对比的目标文本内容</div>
+                </div>
+            </div>
+        </div>
+        <div class="operation-container">
+            选择语言
+            <select id="language_sel" class="form-control-sm" style="width: 100px;">
+                <option value="">无</option>
+                <option>json</option>
+                <option>java</option>
+                <option>javascript</option>
+                <option>sql</option>
+                <option>shell</option>
+                <option>xml</option>
+            </select>
+            &nbsp;/&nbsp;
+            计算所有路径
+            <select id="find_all_steps_sel" class="form-control-sm" style="width: 60px;">
+                <option value="true">是</option>
+                <option value="false" selected>否</option>
+            </select>
+            &nbsp;/&nbsp;
+            搜索深度(d)
+            <input id="search_depth_input" type="number" class="form-control-sm" style="width: 100px; border-width: 1px;" value="3000"/>
+            &nbsp;/&nbsp;
+            关联上下文(U)
+            <input id="unified_input" type="number" class="form-control-sm" style="width: 100px; border-width: 1px;" value="3"/>
+            &nbsp;/&nbsp;
+            <button id="compare_btn" type="button" class="btn btn-primary btn-sm" disabled>对比</button>
+        </div>
+        <div class="container-area">
+            <div class="area-wrapper"  style="visibility: hidden;">
+                <div id="diff_result" class="diff-result"></div>
+            </div>
+            <div class="area-wrapper" style="visibility: hidden;">
+                <div id="formatted_diff_result" class="diff-result"></div>
+            </div>
+        </div>
+        <div style="height: 30px;"></div>
+    </div>
+</body>
+</html>
