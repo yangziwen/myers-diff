@@ -33,17 +33,17 @@ var TextEditor = Object.assign((function(monaco, el, options={}) {
 }).constructor;
 
 
-var DiffEditor = Object.assign((function(monaco, el) {
+var DiffEditor = Object.assign((function(monaco, el, options={}) {
     this.monaco = monaco;
     this.lineNumbers = {};
     this.edits = [];
-    this.editor = monaco.editor.create(el, {
+    this.editor = monaco.editor.create(el, Object.assign({
         lineNumbers: originLineNumber => this.lineNumbers[originLineNumber],
         readOnly: true,
         minimap: {
             enabled: false
         }
-    });
+    }, options));
 }).prototype, {
     refresh(edits) {
         this.edits = edits;
