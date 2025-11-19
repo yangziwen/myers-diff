@@ -75,11 +75,11 @@ h1, h2 {
 <script src="min/myers.min.js"></script>
 <script src="min/diffchart.min.js"></script>
 <script src="min/diffeditor.min.js"></script>
-<script src="https://cdn.staticfile.net/echarts/5.4.3/echarts.common.min.js"></script>
-<script src="https://cdn.staticfile.net/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.min.js"></script>
 <script src="js/require.js" async="true"></script>
 <script>
-require.config({ paths: { 'vs': 'https://cdn.staticfile.net/monaco-editor/0.45.0/min/vs' }});
+require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
 window.onload = () => {
     let findAllStepsSel = document.getElementById('find_all_steps_sel');
     let searchDepthInput = document.getElementById('search_depth_input');
